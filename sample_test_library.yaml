@@ -1,0 +1,40 @@
+name: sample101 test library
+environments:
+- PROD
+- QA
+- DEV
+inputs:
+- input_name: products_list
+  input_type: local_file
+  input_locations:
+    PROD: tests/products_file.prod.csv
+    QA: tests/products_file.qa.csv
+    DEV: tests/products_file.dev.csv
+- input_name: customers_list
+  input_type: local_file
+  input_locations:
+    PROD: tests/customers_file.prod.csv
+    QA: tests/customers_file.qa.csv
+    DEV: tests/customers_file.dev.csv
+tests:
+- test_name: are_products_there
+  test_input: products_list
+  test_type: presence_test
+  test_is_critical: true
+  test_is_sequential: false
+- test_name: are_products_fresh_enough
+  test_input: products_list
+  test_type: fresh_enough_test
+  test_is_critical: true
+  test_max_age_in_hours: 24
+  test_is_sequential: false
+- test_name: are_products_well_formated
+  test_input: products_list
+  test_type: format_test
+  test_is_critical: true
+  test_file_format: csv
+  test_starting_row: 2
+  test_columns:
+  - jeden: string
+  - dwa: int
+  - trzy: int
