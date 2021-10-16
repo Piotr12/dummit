@@ -6,12 +6,16 @@ environments:
 inputs:
 - input_name: products_list
   input_type: local_file
+  input_format: csv
+  input_header_row: True
   input_locations:
     PROD: tests/products_file.prod.csv
     QA: tests/products_file.qa.csv
     DEV: tests/products_file.dev.csv
 - input_name: customers_list
   input_type: local_file
+  input_format: csv
+  input_header_row: True
   input_locations:
     PROD: tests/customers_file.prod.csv
     QA: tests/customers_file.qa.csv
@@ -32,9 +36,35 @@ tests:
   test_input: products_list
   test_type: format_test
   test_is_critical: true
-  test_file_format: csv
-  test_starting_row: 2
   test_columns:
-  - jeden: string
-  - dwa: int
-  - trzy: int
+  - prod_id: int
+  - prod_name: string
+  - prod_category: string
+- test_name: are_products_well_formated_test_should_fail
+  test_input: products_list
+  test_type: format_test
+  test_is_critical: true
+  test_columns:
+  - prod_id: int
+  - prod_name: int
+  - prod_category: string
+- test_name: are_product_ids_unique
+  test_input: products_list
+  test_type: uniqueness_test
+  test_is_critical: true
+  test_columns:
+  - prod_id
+- test_name: are_product_categories_unique_test_should_fail
+  test_input: products_list
+  test_type: uniqueness_test
+  test_is_critical: true
+  test_columns:
+  - prod_category
+- test_name: are_product_category_id_pairs_unique
+  test_input: products_list
+  test_type: uniqueness_test
+  test_is_critical: true
+  test_columns:
+  - prod_category
+  - prod_id
+

@@ -26,5 +26,7 @@ class TestFactory():
             return FreshEnoughTest(data_dict)
         elif test_type=="format_test":
             return FormatTest(data_dict)
+        elif test_type=="uniqueness_test":
+            return UniquenessTest(data_dict)
         else:
             raise UnknownTestTypeException(test_type)

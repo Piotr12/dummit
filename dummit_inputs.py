@@ -1,8 +1,13 @@
 from dummit_tests import *
+from dummit_df_tests import *
+import pandas as pd
 import os
 import time
 
-class TestTypeNotImplemented(Exception):
+class MethodNotImplementedException(Exception):
+    pass
+
+class UnableToLoadFormatToPandas(Exception):
     pass
 
 class Input():
@@ -10,21 +15,43 @@ class Input():
     Generic Input class that definess all the Tests we expect subclasses to implement
     """
     def __init__(self,environments,data_dict):
+        # common fields 
         self.name = data_dict.get("input_name")
         self.type = data_dict.get("input_type")
-        self.testRunID = None  # a non yaml field, to be used to ensure any local storate is in unique location for the current test run
+        self.format = data_dict.get("input_format", "csv")
+        self.header_row = data_dict.get("input_header_row", True)
+        self._df = None # filled via getDataFrame not to recreate it for each test
+        self.testRunID = None   # a non yaml field, to be used to ensure 
+                                # local storage is in unique location for the current test run
+                                # so its not downloaded only once
         self.locations = {}
         for environment in environments:
             self.locations[environment] = data_dict.get("input_locations").get(environment)
 
-    def runPresenceTest(self,environment: str, test:PresenceTest) -> TestResult :
-        raise TestTypeNotImplemented("in runPresenceTest")
+    def getDataFrame(self, environment,format):
+        raise MethodNotImplementedException("in getDataFrame")
+
+    def runPresenceTest(self,environment: str) -> TestResult :
+        raise MethodNotImplementedException("in runPresenceTest")
     
     def runFreshEnoughTest(self,environment: str, test:FreshEnoughTest) -> TestResult :
-        raise TestTypeNotImplemented("in runFreshEnoughTest")
+        raise MethodNotImplementedException("in runFreshEnoughTest")
+
+    def runUniquenessTest(self, environment: str, test:FormatTest) -> TestResult :
+        df = None
+        df = self.getDataFrame(environment) 
+        if type(df) != pd.DataFrame:
+            return TestResult.COMPLETED_WITH_FAILURE
+        else:
+            return DataFrameTester.testForUniqueness(df,test)
 
     def runFormatTest(self, environment: str, test:FormatTest) -> TestResult :
-        raise TestTypeNotImplemented("in runFormatTest")
+        df = None
+        df = self.getDataFrame(environment) 
+        if type(df) != pd.DataFrame:
+            return TestResult.COMPLETED_WITH_FAILURE
+        else:
+            return DataFrameTester.testForFormat(df,test)
 
     def __str__(self):
         msg = f"Input Name: '{self.name}', Input Type: '{self.type}', Locations: {self.locations}"
@@ -37,7 +64,22 @@ class LocalFileInput(Input):
     def __init__(self,environments,data_dict):
         super().__init__(environments,data_dict)
     
-    def runPresenceTest(self, environment: str, test: PresenceTest) -> TestResult :
+    def getDataFrame(self,environment):
+        if self.runPresenceTest(environment) == TestResult.COMPLETED_WITH_FAILURE:
+            return None
+        if type(self._df)!=pd.DataFrame:
+            format = self.format.lower()
+            if format=="excel" or format =="xls" or format=="xlsx":
+                self._df = pd.read_excel(self.locations[environment])
+            elif format=="csv":
+                self._df = pd.read_csv(self.locations[environment])
+            elif format=="paruqet":
+                self._df = pd.read_parquet(self.locations[environment])
+            else:
+                raise UnableToLoadFormatToPandas(f"{test.format} is a bit of a stranger to me.")
+        return self._df
+        
+    def runPresenceTest(self, environment: str) -> TestResult :
         path = self.locations[environment]
         if os.path.isfile(path):
             return TestResult.COMPLETED_WITH_SUCCESS
@@ -56,14 +98,6 @@ class LocalFileInput(Input):
         else: 
             return TestResult.COMPLETED_WITH_FAILURE
 
-    def runFormatTest(self, environment: str, test: FormatTest) -> TestResult :
-        """ Checks for format compliance. And existence as well."""
-        path = self.locations[environment]
-        if os.path.isfile(path):
-            ### BELOW IS FAKE FOR A WHILE (no time to code :))
-            return TestResult.COMPLETED_WITH_SUCCESS
-        else:
-            return TestResult.COMPLETED_WITH_FAILURE
 
 class AzureBlobInput(Input):
     """

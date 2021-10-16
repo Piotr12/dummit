@@ -57,11 +57,13 @@ class TestLibrary():
         for test in self.tests:
             test.status = TestResult.IN_PROGRESS    
             if type(test) is PresenceTest:
-                test.status = self.inputs[test.inputName].runPresenceTest(environment,test)
+                test.status = self.inputs[test.inputName].runPresenceTest(environment)
             elif type(test) is FreshEnoughTest:
                 test.status = self.inputs[test.inputName].runFreshEnoughTest(environment,test)
             elif type(test) is FormatTest:
                 test.status = self.inputs[test.inputName].runFormatTest(environment,test)
+            elif type(test) is UniquenessTest:
+                test.status = self.inputs[test.inputName].runUniquenessTest(environment,test)
             else:
                 raise UnknownTestTypeException(test.type)
             self.logger.logTest(test,test.status)
@@ -70,5 +72,5 @@ if __name__ == "__main__":
     with open('sample_test_library.yaml', 'r') as file:
         tests = TestLibrary(file.read(), TextLogger()) 
         tests.run("DEV")
-        tests.run("QA")
-        tests.run("PROD")
+        #tests.run("QA")
+        #tests.run("PROD")

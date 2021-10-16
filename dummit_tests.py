@@ -45,14 +45,9 @@ class FreshEnoughTest(Test):
         if self.maxAgeInHours == None:
             raise IncompleteTestDefinition(f"test_max_age_in_hours is missing for '{self.name}' test")
 
-class FormatTest(Test):
-    """The most complex one right now, file format, starting row [numbered from 1], columns to check"""
+class ColumnsBasedTest(Test):
     def __init__(self,data_dict):
         super().__init__(data_dict)
-        self.fileFormat = data_dict.get("test_file_format")
-        if self.fileFormat == None: 
-            raise IncompleteTestDefinition(f"test_file_format is missing for '{self.name}' test")
-        self.startingRow = data_dict.get("test_starting_row",1)
         self.columns = data_dict.get("test_columns")
         if self.columns == None:
             raise IncompleteTestDefinition(f"test_columns is missing for '{self.name}' test")
@@ -60,3 +55,12 @@ class FormatTest(Test):
             raise IncompleteTestDefinition(f"test_columns is not a list(?) for '{self.name}' test")
         if len(self.columns)==0:
             raise IncompleteTestDefinition(f"test_columns is an empty list for '{self.name}' test")
+
+class UniquenessTest(ColumnsBasedTest):
+    def __init__(self,data_dict):
+        super().__init__(data_dict)
+
+class FormatTest(ColumnsBasedTest):
+    def __init__(self,data_dict):
+        super().__init__(data_dict)
+    
