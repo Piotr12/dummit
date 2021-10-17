@@ -9,17 +9,29 @@ inputs:
   input_format: csv
   input_header_row: True
   input_locations:
-    PROD: tests/products_file.prod.csv
-    QA: tests/products_file.qa.csv
-    DEV: tests/products_file.dev.csv
+  - location_for_environment: PROD
+    location_type: exact
+    location_value: tests/products_file.prod.csv
+  - location_for_environment: DEV
+    location_type: exact
+    location_value: tests/products_file.dev.csv
+  - location_for_environment: QA
+    location_type: exact
+    location_value: tests/products_file.qa.csv
 - input_name: customers_list
   input_type: local_file
   input_format: csv
   input_header_row: True
   input_locations:
-    PROD: tests/customers_file.prod.csv
-    QA: tests/customers_file.qa.csv
-    DEV: tests/customers_file.dev.csv
+  - location_for_environment: PROD
+    location_type: exact
+    location_value: tests/customers_file.prod.csv
+  - location_for_environment: DEV
+    location_type: exact
+    location_value: tests/customers_file.dev.csv
+  - location_for_environment: QA
+    location_type: exact
+    location_value: tests/customers_file.qa.csv
 tests:
 - test_name: are_products_there
   test_input: products_list

@@ -13,16 +13,16 @@ class UnknownLocationTypeException(Exception):
 
 class InputFactory():
     @staticmethod
-    def createInputFromDict(environments,data_dict):
+    def createInputFromDict(data_dict):
         input_type = data_dict.get("input_type")
         if input_type=="local_file":
-            return di.LocalFileInput(environments,data_dict)
+            return di.LocalFileInput(data_dict)
         else:
             raise UnknownInputTypeException(input_type)
 
 class TestFactory():
     @staticmethod
-    def createTestFromDict(environments,data_dict):
+    def createTestFromDict(data_dict):
         test_type = data_dict.get("test_type")
         if test_type=="presence_test":
             return dt.PresenceTest(data_dict)
@@ -37,9 +37,11 @@ class TestFactory():
 
 class LocationFactory():
     @staticmethod
-    def createLocationFromDict(environments,data_dict):
+    def createLocationFromDict(data_dict):
         location_type = data_dict.get("location_type")
-        if location_type=="exact_location":
+        location_value = data_dict.get("location_value")
+        if location_type=="exact":
+            return dl.ExactLocation(location_value)
             pass
         elif location_type=="":
             pass

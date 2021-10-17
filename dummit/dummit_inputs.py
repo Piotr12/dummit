@@ -1,9 +1,14 @@
+from abc import abstractmethod
 import pandas as pd
 import os
 import time
 
+#from dummit.dummit_factories import LocationFactory
+
 from . import dummit_tests as dt
 from . import dummit_df_tests as dft
+from . import dummit_locations as dl
+from . import dummit_factories as df
 
 class MethodNotImplementedException(Exception):
     pass
@@ -14,8 +19,10 @@ class UnableToLoadFormatToPandas(Exception):
 class Input():
     """
     Generic Input class that definess all the Tests we expect subclasses to implement
+    It actually handles the DataFrame Tests as the specialized class: File / AzureBlob / OracleTable will 
+        be there to support it with the DataFrame and placing that logic here makes less duplication (I think :))
     """
-    def __init__(self,environments,data_dict):
+    def __init__(self,data_dict):
         # common fields 
         self.name = data_dict.get("input_name")
         self.type = data_dict.get("input_type")
@@ -26,15 +33,18 @@ class Input():
                                 # local storage is in unique location for the current test run
                                 # so its not downloaded only once
         self.locations = {}
-        for environment in environments:
-            self.locations[environment] = data_dict.get("input_locations").get(environment)
-
-    def getDataFrame(self, environment,format):
+        for location in data_dict.get("input_locations"):
+            self.locations[location["location_for_environment"]] = df.LocationFactory.createLocationFromDict(location)
+    
+    @abstractmethod
+    def getDataFrame(self, environment:str,format:str):
         raise MethodNotImplementedException("in getDataFrame")
 
+    @abstractmethod
     def runPresenceTest(self,environment: str) -> dt.TestResult :
         raise MethodNotImplementedException("in runPresenceTest")
-    
+
+    @abstractmethod
     def runFreshEnoughTest(self,environment: str, test:dt.FreshEnoughTest) -> dt.TestResult :
         raise MethodNotImplementedException("in runFreshEnoughTest")
 
@@ -62,8 +72,8 @@ class LocalFileInput(Input):
     """
     A file accessible through file system. Actualy a network mount shall also work here.
     """
-    def __init__(self,environments,data_dict):
-        super().__init__(environments,data_dict)
+    def __init__(self,data_dict):
+        super().__init__(data_dict)
     
     def getDataFrame(self,environment):
         if self.runPresenceTest(environment) == dt.TestResult.COMPLETED_WITH_FAILURE:
@@ -71,17 +81,17 @@ class LocalFileInput(Input):
         if type(self._df)!=pd.DataFrame:
             format = self.format.lower()
             if format=="excel" or format =="xls" or format=="xlsx":
-                self._df = pd.read_excel(self.locations[environment])
+                self._df = pd.read_excel(self.locations[environment].get_location_string())
             elif format=="csv":
-                self._df = pd.read_csv(self.locations[environment])
+                self._df = pd.read_csv(self.locations[environment].get_location_string())
             elif format=="paruqet":
-                self._df = pd.read_parquet(self.locations[environment])
+                self._df = pd.read_parquet(self.locations[environment].get_location_string())
             else:
                 raise UnableToLoadFormatToPandas(f"{format} is a bit of a stranger to me.")
         return self._df
         
     def runPresenceTest(self, environment: str) -> dt.TestResult :
-        path = self.locations[environment]
+        path = self.locations[environment].get_location_string()
         if os.path.isfile(path):
             return dt.TestResult.COMPLETED_WITH_SUCCESS
         else:
@@ -89,7 +99,7 @@ class LocalFileInput(Input):
 
     def runFreshEnoughTest(self, environment: str, test: dt.FreshEnoughTest) -> dt.TestResult :
         """ Checks last modification date (and if file exist as well, only if it exist a concept of modification data is there. """
-        path = self.locations[environment]
+        path = self.locations[environment].get_location_string()
         if os.path.isfile(path):
             modification_timestamp = os.path.getmtime(path) 
             if time.time() < modification_timestamp +  60 * 60 * test.maxAgeInHours:

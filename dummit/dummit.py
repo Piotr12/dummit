@@ -32,14 +32,14 @@ class TestLibrary():
         # Inputs part
         self.inputs = {}
         for input_dict in config["inputs"]:
-            input = df.InputFactory.createInputFromDict(self.environments,input_dict)
+            input = df.InputFactory.createInputFromDict(input_dict)
             self.inputs[input.name] = input
         self.logger.logMessage(f"Inputs count: {len(self.inputs)}")
 
         # Tests part
         self.tests = []
-        for test in config["tests"]:
-            self.tests.append(df.TestFactory.createTestFromDict(self.environments,test))
+        for test_dict in config["tests"]:
+            self.tests.append(df.TestFactory.createTestFromDict(test_dict))
         self.logger.logMessage(f"Tests count: {len(self.tests)}")
 
         # Over an out!
