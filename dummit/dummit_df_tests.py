@@ -1,6 +1,6 @@
 import pandas as pd
 
-from dummit_tests import TestResult
+from . import dummit_tests as dt
 
 # here the DataFrame based tests will be done
 # as static methods of a class 
@@ -16,17 +16,17 @@ class DataFrameTester():
             expected_type = list(column.values())[0]
             pandas_type = df[column].dtypes[0]
             if DataFrameTester.pandasTypeMatchesExpectedType(pandas_type,expected_type) == False:
-                return TestResult.COMPLETED_WITH_FAILURE
-        return TestResult.COMPLETED_WITH_SUCCESS
+                return dt.TestResult.COMPLETED_WITH_FAILURE
+        return dt.TestResult.COMPLETED_WITH_SUCCESS
     
     @staticmethod
     def testForUniqueness(df,test):
         count = df.shape[0]
         unique_count = df.groupby(test.columns).count().shape[0]
         if count == unique_count: 
-            return TestResult.COMPLETED_WITH_SUCCESS
+            return dt.TestResult.COMPLETED_WITH_SUCCESS
         else:
-            return TestResult.COMPLETED_WITH_FAILURE
+            return dt.TestResult.COMPLETED_WITH_FAILURE
 
     @staticmethod
     def pandasTypeMatchesExpectedType(pandas_type,expected_type):

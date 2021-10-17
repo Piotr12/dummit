@@ -1,8 +1,9 @@
-from dummit_tests import *
-from dummit_df_tests import *
 import pandas as pd
 import os
 import time
+
+from . import dummit_tests as dt
+from . import dummit_df_tests as dft
 
 class MethodNotImplementedException(Exception):
     pass
@@ -31,27 +32,27 @@ class Input():
     def getDataFrame(self, environment,format):
         raise MethodNotImplementedException("in getDataFrame")
 
-    def runPresenceTest(self,environment: str) -> TestResult :
+    def runPresenceTest(self,environment: str) -> dt.TestResult :
         raise MethodNotImplementedException("in runPresenceTest")
     
-    def runFreshEnoughTest(self,environment: str, test:FreshEnoughTest) -> TestResult :
+    def runFreshEnoughTest(self,environment: str, test:dt.FreshEnoughTest) -> dt.TestResult :
         raise MethodNotImplementedException("in runFreshEnoughTest")
 
-    def runUniquenessTest(self, environment: str, test:FormatTest) -> TestResult :
+    def runUniquenessTest(self, environment: str, test:dt.FormatTest) -> dt.TestResult :
         df = None
         df = self.getDataFrame(environment) 
         if type(df) != pd.DataFrame:
-            return TestResult.COMPLETED_WITH_FAILURE
+            return dt.TestResult.COMPLETED_WITH_FAILURE
         else:
-            return DataFrameTester.testForUniqueness(df,test)
+            return dft.DataFrameTester.testForUniqueness(df,test)
 
-    def runFormatTest(self, environment: str, test:FormatTest) -> TestResult :
+    def runFormatTest(self, environment: str, test:dt.FormatTest) -> dt.TestResult :
         df = None
         df = self.getDataFrame(environment) 
         if type(df) != pd.DataFrame:
-            return TestResult.COMPLETED_WITH_FAILURE
+            return dt.TestResult.COMPLETED_WITH_FAILURE
         else:
-            return DataFrameTester.testForFormat(df,test)
+            return dft.DataFrameTester.testForFormat(df,test)
 
     def __str__(self):
         msg = f"Input Name: '{self.name}', Input Type: '{self.type}', Locations: {self.locations}"
@@ -65,7 +66,7 @@ class LocalFileInput(Input):
         super().__init__(environments,data_dict)
     
     def getDataFrame(self,environment):
-        if self.runPresenceTest(environment) == TestResult.COMPLETED_WITH_FAILURE:
+        if self.runPresenceTest(environment) == dt.TestResult.COMPLETED_WITH_FAILURE:
             return None
         if type(self._df)!=pd.DataFrame:
             format = self.format.lower()
@@ -76,27 +77,27 @@ class LocalFileInput(Input):
             elif format=="paruqet":
                 self._df = pd.read_parquet(self.locations[environment])
             else:
-                raise UnableToLoadFormatToPandas(f"{test.format} is a bit of a stranger to me.")
+                raise UnableToLoadFormatToPandas(f"{format} is a bit of a stranger to me.")
         return self._df
         
-    def runPresenceTest(self, environment: str) -> TestResult :
+    def runPresenceTest(self, environment: str) -> dt.TestResult :
         path = self.locations[environment]
         if os.path.isfile(path):
-            return TestResult.COMPLETED_WITH_SUCCESS
+            return dt.TestResult.COMPLETED_WITH_SUCCESS
         else:
-            return TestResult.COMPLETED_WITH_FAILURE
+            return dt.TestResult.COMPLETED_WITH_FAILURE
 
-    def runFreshEnoughTest(self, environment: str, test: FreshEnoughTest) -> TestResult :
+    def runFreshEnoughTest(self, environment: str, test: dt.FreshEnoughTest) -> dt.TestResult :
         """ Checks last modification date (and if file exist as well, only if it exist a concept of modification data is there. """
         path = self.locations[environment]
         if os.path.isfile(path):
             modification_timestamp = os.path.getmtime(path) 
             if time.time() < modification_timestamp +  60 * 60 * test.maxAgeInHours:
-                return TestResult.COMPLETED_WITH_SUCCESS
+                return dt.TestResult.COMPLETED_WITH_SUCCESS
             else:
-                return TestResult.COMPLETED_WITH_FAILURE
+                return dt.TestResult.COMPLETED_WITH_FAILURE
         else: 
-            return TestResult.COMPLETED_WITH_FAILURE
+            return dt.TestResult.COMPLETED_WITH_FAILURE
 
 
 class AzureBlobInput(Input):

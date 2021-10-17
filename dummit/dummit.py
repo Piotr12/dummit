@@ -1,9 +1,8 @@
 import yaml
 import time
 import uuid
-from  dummit_factories import *
-from dummit_inputs import *
-from dummit_tests import *
+from . import dummit_factories as df
+from . import dummit_tests as dt
 
 class TextLogger():
     """ Simple logging helper. 
@@ -33,14 +32,14 @@ class TestLibrary():
         # Inputs part
         self.inputs = {}
         for input_dict in config["inputs"]:
-            input = InputFactory.createInputFromDict(self.environments,input_dict)
+            input = df.InputFactory.createInputFromDict(self.environments,input_dict)
             self.inputs[input.name] = input
         self.logger.logMessage(f"Inputs count: {len(self.inputs)}")
 
         # Tests part
         self.tests = []
         for test in config["tests"]:
-            self.tests.append(TestFactory.createTestFromDict(self.environments,test))
+            self.tests.append(df.TestFactory.createTestFromDict(self.environments,test))
         self.logger.logMessage(f"Tests count: {len(self.tests)}")
 
         # Over an out!
@@ -55,17 +54,17 @@ class TestLibrary():
             input.testRunID = run_uuid
         # run all tests (forget parallel runs for now)
         for test in self.tests:
-            test.status = TestResult.IN_PROGRESS    
-            if type(test) is PresenceTest:
+            test.status = dt.TestResult.IN_PROGRESS    
+            if type(test) is dt.PresenceTest:
                 test.status = self.inputs[test.inputName].runPresenceTest(environment)
-            elif type(test) is FreshEnoughTest:
+            elif type(test) is dt.FreshEnoughTest:
                 test.status = self.inputs[test.inputName].runFreshEnoughTest(environment,test)
-            elif type(test) is FormatTest:
+            elif type(test) is dt.FormatTest:
                 test.status = self.inputs[test.inputName].runFormatTest(environment,test)
-            elif type(test) is UniquenessTest:
+            elif type(test) is dt.UniquenessTest:
                 test.status = self.inputs[test.inputName].runUniquenessTest(environment,test)
             else:
-                raise UnknownTestTypeException(test.type)
+                raise dt.UnknownTestTypeException(test.type)
             self.logger.logTest(test,test.status)
             
 if __name__ == "__main__":
