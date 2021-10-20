@@ -1,6 +1,6 @@
 class Location:
     def __init__(self,location_string):
-        self.location_string = location_string # here some resource identifier will end 
+        self.location_string = location_string # here some resource identifier will end
     def __str__(self):
         return self.location_string
     def get_location_string(self):

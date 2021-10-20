@@ -1,3 +1,4 @@
+from os import nice
 import yaml
 import time
 import uuid
@@ -28,19 +29,30 @@ class TestLibrary():
         # Read the yaml input
         self.name = config["name"]
         self.environments = config["environments"]
-
-        # Inputs part
+        # Inputs part (tests are there as well!)
         self.inputs = {}
+        self.tests = []
         for input_dict in config["inputs"]:
             input = df.InputFactory.createInputFromDict(input_dict)
             self.inputs[input.name] = input
-        self.logger.logMessage(f"Inputs count: {len(self.inputs)}")
+            # this double for loop section below is ... ugly :( need some redesign when time allows. 
+            for critical_test in input_dict["must"]:
+                test_type = list(critical_test.keys())[0]
+                test_definition = list(critical_test.values())[0]
+                test = df.TestFactory.createTestFromDict(input.name,test_type,
+                            test_definition, is_critical=True)
+                self.tests.append(test)
+            for nice_to_have_test in input_dict["would_be_nice_for_it_to"]:        
+                test_type = list(nice_to_have_test.keys())[0]
+                test_definition = list(nice_to_have_test.values())[0]
+                test = df.TestFactory.createTestFromDict(input.name,test_type,
+                            test_definition, is_critical=False)
+                self.tests.append(test)
 
-        # Tests part
-        self.tests = []
-        for test_dict in config["tests"]:
-            self.tests.append(df.TestFactory.createTestFromDict(test_dict))
+        self.logger.logMessage(f"Inputs count: {len(self.inputs)}")            
         self.logger.logMessage(f"Tests count: {len(self.tests)}")
+
+
 
         # Over an out!
         self.logger.logMessage("TestLibrary Constructor completed") 

@@ -1,0 +1,26 @@
+name: sample101 test library
+environments:
+- PROD
+- QA
+- DEV
+inputs:
+- input_name: products_list
+  input_type: local_file
+  input_format: csv
+  input_header_row: True
+  input_locations:
+  - PROD: exact, demos/products_file.prod.csv
+  - DEV: exact, demos/products_file.dev.csv
+  - QA: exact, demos/products_file.qa.csv 
+  must:
+  - be_present: True
+  - be_modified_at_least_x_hours_ago: 24
+  would_be_nice_for_it_to:
+  - be_well_formated:
+    - prod_id: int
+    - prod_name: string
+    - prod_category: string
+  - have_no_duplicates_for_a_key_of:
+    - prod_id
+  - have_no_duplicates_for_a_key_of: #this should fail for dev sample file
+    - prod_category

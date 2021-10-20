@@ -33,8 +33,9 @@ class Input():
                                 # local storage is in unique location for the current test run
                                 # so its not downloaded only once
         self.locations = {}
-        for location in data_dict.get("input_locations"):
-            self.locations[location["location_for_environment"]] = df.LocationFactory.createLocationFromDict(location)
+        for locations in data_dict.get("input_locations"):
+            for env,location in locations.items():
+                self.locations[env] = df.LocationFactory.createLocationFromDict(location)
     
     @abstractmethod
     def getDataFrame(self, environment:str,format:str):
@@ -91,7 +92,7 @@ class LocalFileInput(Input):
         return self._df
         
     def runPresenceTest(self, environment: str) -> dt.TestResult :
-        path = self.locations[environment].get_location_string()
+        path = self.locations[environment].get_location_string()    
         if os.path.isfile(path):
             return dt.TestResult.COMPLETED_WITH_SUCCESS
         else:

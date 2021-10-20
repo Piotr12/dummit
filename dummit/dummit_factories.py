@@ -15,31 +15,31 @@ class InputFactory():
     @staticmethod
     def createInputFromDict(data_dict):
         input_type = data_dict.get("input_type")
-        if input_type=="local_file":
+        if "local_file" in input_type:
             return di.LocalFileInput(data_dict)
         else:
             raise UnknownInputTypeException(input_type)
 
 class TestFactory():
     @staticmethod
-    def createTestFromDict(data_dict):
-        test_type = data_dict.get("test_type")
-        if test_type=="presence_test":
-            return dt.PresenceTest(data_dict)
-        elif test_type=="fresh_enough_test":
-            return dt.FreshEnoughTest(data_dict)
-        elif test_type=="format_test":
-            return dt.FormatTest(data_dict)
-        elif test_type=="uniqueness_test":
-            return dt.UniquenessTest(data_dict)
+    def createTestFromDict(input_name,test_type, test_definition, is_critical=False):
+        if test_type=="be_present":
+            return dt.PresenceTest(input_name,is_critical) # test definition is a dummy here 
+        elif test_type=="be_modified_at_least_x_hours_ago":
+            return dt.FreshEnoughTest(input_name,test_definition,is_critical)
+        elif test_type=="be_well_formated":
+            return dt.FormatTest(input_name,test_definition,is_critical)
+        elif test_type=="have_no_duplicates_for_a_key_of":
+            return dt.UniquenessTest(input_name,test_definition,is_critical)
         else:
             raise UnknownTestTypeException(test_type)
 
 class LocationFactory():
     @staticmethod
-    def createLocationFromDict(data_dict):
-        location_type = data_dict.get("location_type")
-        location_value = data_dict.get("location_value")
+    def createLocationFromDict(data_string):
+        values = data_string.split(",")
+        location_type = values[0].replace(" ","")
+        location_value = values[1].replace(" ","")
         if location_type=="exact":
             return dl.ExactLocation(location_value)
             pass
