@@ -1,4 +1,8 @@
 name: sample101 test library
+secrets:
+  secrets_provider: azure_keyvault
+  secrets_location: test-keyvault-playground
+  secrets_token_env_key: azure_key
 environments:
 - PROD
 - QA

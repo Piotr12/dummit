@@ -127,3 +127,7 @@ class OracleTableInput(Input):
     def __init__(self,environments,data_dict):
         super().__init__(environments,data_dict)
 
+class SharepointBlobInput(Input):
+    """ nothing here yet"""
+    def __init__(self,environments,data_dict):
+        super().__init__(environments,data_dict)
