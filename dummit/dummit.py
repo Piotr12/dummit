@@ -3,7 +3,6 @@ import yaml
 import time
 import uuid
 
-from dummit.dummit_secrets import SecretsManager
 from . import dummit_factories as df
 from . import dummit_tests as dt
 
@@ -31,40 +30,38 @@ class TestLibrary():
         config = yaml.load(yaml_string,Loader=yaml.SafeLoader)
         self.logger.logMessage("Config Loaded") 
 
-        # Load the secrets data (provider and key for it)
+        # Load the secrets data (provider and location for it)
         secrets = config.get("secrets",None)
         if secrets:
             self.secrets_provider = secrets.get("secrets_provider","")
             self.secrets_location = secrets.get("secrets_location","")
-            token_key = secrets.get("secrets_token_env_key","ConfigIssueForSecrets")
-            self.secrets_auth_token = os.environ.get(token_key,"ConfigForSecretsIsUninteligible")
-            if self.secrets_auth_token=="ConfigForSecretsIsUninteligible":
-                raise ConfigUninteligibleException("secrets key was there, something went wrong later")
-        else:
-            raise ConfigUninteligibleException("No secrets key present?")
-
         # Read the yaml input
         self.name = config["name"]
         self.environments = config["environments"]
-        # Inputs part (tests are there as well!)
+        # Inputs part (tests are there within input config as well!)
         self.inputs = {}
         self.tests = []
         for input_dict in config["inputs"]:
             input = df.InputFactory.createInputFromDict(input_dict)
+            if self.secrets_provider:
+                input.secrets_provider = self.secrets_provider
+                input.secrets_location = self.secrets_location
             self.inputs[input.name] = input
             # this double for loop section below is ... ugly :( need some redesign when time allows. 
-            for critical_test in input_dict["must"]:
-                test_type = list(critical_test.keys())[0]
-                test_definition = list(critical_test.values())[0]
-                test = df.TestFactory.createTestFromDict(input.name,test_type,
-                            test_definition, is_critical=True)
-                self.tests.append(test)
-            for nice_to_have_test in input_dict["would_be_nice_for_it_to"]:        
-                test_type = list(nice_to_have_test.keys())[0]
-                test_definition = list(nice_to_have_test.values())[0]
-                test = df.TestFactory.createTestFromDict(input.name,test_type,
-                            test_definition, is_critical=False)
-                self.tests.append(test)
+            if "must" in input_dict:
+                for critical_test in input_dict["must"]:
+                    test_type = list(critical_test.keys())[0]
+                    test_definition = list(critical_test.values())[0]
+                    test = df.TestFactory.createTestFromDict(input.name,test_type,
+                                test_definition, is_critical=True)
+                    self.tests.append(test)
+            if "would_be_nice_for_it_to" in input_dict:
+                for nice_to_have_test in input_dict["would_be_nice_for_it_to"]:        
+                    test_type = list(nice_to_have_test.keys())[0]
+                    test_definition = list(nice_to_have_test.values())[0]
+                    test = df.TestFactory.createTestFromDict(input.name,test_type,
+                                test_definition, is_critical=False)
+                    self.tests.append(test)
 
         self.logger.logMessage(f"Inputs count: {len(self.inputs)}")            
         self.logger.logMessage(f"Tests count: {len(self.tests)}")

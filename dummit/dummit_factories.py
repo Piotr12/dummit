@@ -1,6 +1,6 @@
-from . import dummit_inputs as di
-from . import dummit_tests as dt
-from . import dummit_locations as dl
+from dummit.dummit_inputs import AzureBlobInput, LocalFileInput
+from dummit.dummit_tests import PresenceTest,FreshEnoughTest,FormatTest, UniquenessTest
+from dummit.dummit_locations import ExactLocation
 
 class UnknownInputTypeException(Exception):
     pass
@@ -16,7 +16,9 @@ class InputFactory():
     def createInputFromDict(data_dict):
         input_type = data_dict.get("input_type")
         if "local_file" in input_type:
-            return di.LocalFileInput(data_dict)
+            return LocalFileInput(data_dict)
+        elif "azure_blob" in input_type:
+            return AzureBlobInput(data_dict)
         else:
             raise UnknownInputTypeException(input_type)
 
@@ -24,13 +26,13 @@ class TestFactory():
     @staticmethod
     def createTestFromDict(input_name,test_type, test_definition, is_critical=False):
         if test_type=="be_present":
-            return dt.PresenceTest(input_name,is_critical) # test definition is a dummy here 
+            return PresenceTest(input_name,is_critical) # test definition is a dummy here 
         elif test_type=="be_modified_at_least_x_hours_ago":
-            return dt.FreshEnoughTest(input_name,test_definition,is_critical)
+            return FreshEnoughTest(input_name,test_definition,is_critical)
         elif test_type=="be_well_formated":
-            return dt.FormatTest(input_name,test_definition,is_critical)
+            return FormatTest(input_name,test_definition,is_critical)
         elif test_type=="have_no_duplicates_for_a_key_of":
-            return dt.UniquenessTest(input_name,test_definition,is_critical)
+            return UniquenessTest(input_name,test_definition,is_critical)
         else:
             raise UnknownTestTypeException(test_type)
 
@@ -41,7 +43,7 @@ class LocationFactory():
         location_type = values[0].replace(" ","")
         location_value = values[1].replace(" ","")
         if location_type=="exact":
-            return dl.ExactLocation(location_value)
+            return ExactLocation(location_value)
             pass
         elif location_type=="":
             pass

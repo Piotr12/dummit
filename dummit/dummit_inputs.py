@@ -3,11 +3,15 @@ import pandas as pd
 import os
 import time
 
+from pandas.core.base import NoNewAttributesMixin
+from azure.storage.blob import BlobServiceClient,  __version__
+
 #from dummit.dummit_factories import LocationFactory
 
+from dummit.dummit_tests import TestResult
+from dummit.dummit_secrets import AzureSecretsManager
 from . import dummit_tests as dt
 from . import dummit_df_tests as dft
-from . import dummit_locations as dl
 from . import dummit_factories as df
 
 class MethodNotImplementedException(Exception):
@@ -42,14 +46,14 @@ class Input():
         raise MethodNotImplementedException("in getDataFrame")
 
     @abstractmethod
-    def runPresenceTest(self,environment: str) -> dt.TestResult :
+    def runPresenceTest(self,environment: str) -> TestResult :
         raise MethodNotImplementedException("in runPresenceTest")
 
     @abstractmethod
-    def runFreshEnoughTest(self,environment: str, test:dt.FreshEnoughTest) -> dt.TestResult :
+    def runFreshEnoughTest(self,environment: str, test:dt.FreshEnoughTest) -> TestResult :
         raise MethodNotImplementedException("in runFreshEnoughTest")
 
-    def runUniquenessTest(self, environment: str, test:dt.FormatTest) -> dt.TestResult :
+    def runUniquenessTest(self, environment: str, test:dt.FormatTest) -> TestResult :
         df = None
         df = self.getDataFrame(environment) 
         if type(df) != pd.DataFrame:
@@ -57,7 +61,7 @@ class Input():
         else:
             return dft.DataFrameTester.testForUniqueness(df,test)
 
-    def runFormatTest(self, environment: str, test:dt.FormatTest) -> dt.TestResult :
+    def runFormatTest(self, environment: str, test:dt.FormatTest) -> TestResult :
         df = None
         df = self.getDataFrame(environment) 
         if type(df) != pd.DataFrame:
@@ -77,30 +81,30 @@ class LocalFileInput(Input):
         super().__init__(data_dict)
     
     def getDataFrame(self,environment):
-        if self.runPresenceTest(environment) == dt.TestResult.COMPLETED_WITH_FAILURE:
+        if self.runPresenceTest(environment) == TestResult.COMPLETED_WITH_FAILURE:
             return None
         if type(self._df)!=pd.DataFrame:
             format = self.format.lower()
             if format=="excel" or format =="xls" or format=="xlsx":
-                self._df = pd.read_excel(self.locations[environment].get_location_string())
+                self._df = pd.read_excel(self.locations[environment].getLocationString())
             elif format=="csv":
-                self._df = pd.read_csv(self.locations[environment].get_location_string())
+                self._df = pd.read_csv(self.locations[environment].getLocationString())
             elif format=="paruqet":
-                self._df = pd.read_parquet(self.locations[environment].get_location_string())
+                self._df = pd.read_parquet(self.locations[environment].getLocationString())
             else:
                 raise UnableToLoadFormatToPandas(f"{format} is a bit of a stranger to me.")
         return self._df
         
-    def runPresenceTest(self, environment: str) -> dt.TestResult :
-        path = self.locations[environment].get_location_string()    
+    def runPresenceTest(self, environment: str) -> TestResult :
+        path = self.locations[environment].getLocationString()    
         if os.path.isfile(path):
-            return dt.TestResult.COMPLETED_WITH_SUCCESS
+            return TestResult.COMPLETED_WITH_SUCCESS
         else:
-            return dt.TestResult.COMPLETED_WITH_FAILURE
+            return TestResult.COMPLETED_WITH_FAILURE
 
-    def runFreshEnoughTest(self, environment: str, test: dt.FreshEnoughTest) -> dt.TestResult :
+    def runFreshEnoughTest(self, environment: str, test: dt.FreshEnoughTest) -> TestResult :
         """ Checks last modification date (and if file exist as well, only if it exist a concept of modification data is there. """
-        path = self.locations[environment].get_location_string()
+        path = self.locations[environment].getLocationString()
         if os.path.isfile(path):
             modification_timestamp = os.path.getmtime(path) 
             if time.time() < modification_timestamp +  60 * 60 * test.maxAgeInHours:
@@ -116,18 +120,51 @@ class AzureBlobInput(Input):
     It does not exist for real. At least not yet. Some tests can be done without download via API, some will require full access.
     Need to think about caching it for the test run duration if download happens.
     """
-    def __init__(self,environments,data_dict):
-        super().__init__(environments,data_dict)
+    def __init__(self,data_dict):
+        super().__init__(data_dict)
+    
+    def runPresenceTest(self, environment: str) -> dt.TestResult :
+        properties = self.getBlobProperties(environment)
+        if properties:
+            return TestResult.COMPLETED_WITH_SUCCESS
+        else:
+            return TestResult.COMPLETED_WITH_FAILURE
+    
+    def runFreshEnoughTest(self, environment: str, test: dt.FreshEnoughTest) -> TestResult :
+        properties = self.getBlobProperties(environment)
+        if properties:
+            return TestResult.COMPLETED_WITH_SUCCESS
+        else:
+            return TestResult.COMPLETED_WITH_FAILURE
+        
+
+    def getBlobProperties(self, environment: str):
+        #1. Get all login params
+        connection_details = self.locations[environment].parseAsAzureLocation()
+        key_vault_name = self.secrets_location
+        secret_name = connection_details["keyvault_secret_name"]
+        conn_string = AzureSecretsManager.getSecretValueByName(key_vault_name, secret_name)
+        blob_service_client = BlobServiceClient.from_connection_string(conn_string)
+        #2. Check if blob is there
+        container = connection_details["storage_container"]
+        blob = connection_details["storage_blob"]
+        blob_client = blob_service_client.get_blob_client(container,blob)
+        try:
+            return blob_client.get_blob_properties()
+        except:
+            return None
+
+        
     
 class OracleTableInput(Input):
     """
     It does not exist for real. At least not yet. But why not test some Table for compliance?
     Need to think about caching the query result during test run
     """
-    def __init__(self,environments,data_dict):
-        super().__init__(environments,data_dict)
+    def __init__(self,data_dict):
+        super().__init__(data_dict)
 
 class SharepointBlobInput(Input):
     """ nothing here yet"""
-    def __init__(self,environments,data_dict):
-        super().__init__(environments,data_dict)
+    def __init__(self,data_dict):
+        super().__init__(data_dict)

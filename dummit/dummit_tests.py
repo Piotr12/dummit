@@ -25,7 +25,7 @@ class Test():
         self.isCritical = is_critical   
 
     def __str__(self):
-        return f"Test class: '{type(self).__name__}', isCritical:'{self.isCritical}'"
+        return f"Test class: '{type(self).__name__}', for {self.inputName}, isCritical:'{self.isCritical}'"
 
 class PresenceTest(Test):
     """That is actually a test without any extra params, parent class fields are enough"""

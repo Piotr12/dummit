@@ -2,12 +2,21 @@ name: sample101 test library
 secrets:
   secrets_provider: azure_keyvault
   secrets_location: test-keyvault-playground
-  secrets_token_env_key: azure_key
+  # will need three os envs to run Tenant/Client/ClientSecret!
 environments:
 - PROD
 - QA
 - DEV
 inputs:
+- input_name: sales
+  input_type: azure_blob
+  input_format: csv
+  input_header_row: True
+  input_locations:
+  - DEV: exact, blob-connection-string@playgroundblob01/dummit/demos/products_file.dev.csv
+  must:
+  - be_present: True
+  - be_modified_at_least_x_hours_ago: 24
 - input_name: products_list
   input_type: local_file
   input_format: csv
