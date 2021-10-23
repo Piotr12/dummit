@@ -2,6 +2,7 @@ from abc import abstractmethod
 import pandas as pd
 import os
 import time
+from io import BytesIO
 
 from pandas.core.base import NoNewAttributesMixin
 from azure.storage.blob import BlobServiceClient,  __version__
@@ -36,41 +37,38 @@ class Input():
         self.testRunID = None   # a non yaml field, to be used to ensure 
                                 # local storage is in unique location for the current test run
                                 # so its not downloaded only once
-        self.locations = {}
-        for locations in data_dict.get("input_locations"):
-            for env,location in locations.items():
-                self.locations[env] = df.LocationFactory.createLocationFromDict(location)
+        self.location = df.LocationFactory.createLocationFromDict(data_dict["input_location"])
     
     @abstractmethod
-    def getDataFrame(self, environment:str,format:str):
+    def getDataFrame(self,format:str):
         raise MethodNotImplementedException("in getDataFrame")
 
     @abstractmethod
-    def runPresenceTest(self,environment: str) -> TestResult :
+    def runPresenceTest(self) -> TestResult :
         raise MethodNotImplementedException("in runPresenceTest")
 
     @abstractmethod
-    def runFreshEnoughTest(self,environment: str, test:dt.FreshEnoughTest) -> TestResult :
+    def runFreshEnoughTest(self, test:dt.FreshEnoughTest) -> TestResult :
         raise MethodNotImplementedException("in runFreshEnoughTest")
 
-    def runUniquenessTest(self, environment: str, test:dt.FormatTest) -> TestResult :
+    def runUniquenessTest(self, test:dt.FormatTest) -> TestResult :
         df = None
-        df = self.getDataFrame(environment) 
+        df = self.getDataFrame() 
         if type(df) != pd.DataFrame:
             return dt.TestResult.COMPLETED_WITH_FAILURE
         else:
             return dft.DataFrameTester.testForUniqueness(df,test)
 
-    def runFormatTest(self, environment: str, test:dt.FormatTest) -> TestResult :
+    def runFormatTest(self,  test:dt.FormatTest) -> TestResult :
         df = None
-        df = self.getDataFrame(environment) 
+        df = self.getDataFrame() 
         if type(df) != pd.DataFrame:
             return dt.TestResult.COMPLETED_WITH_FAILURE
         else:
             return dft.DataFrameTester.testForFormat(df,test)
 
     def __str__(self):
-        msg = f"Input Name: '{self.name}', Input Type: '{self.type}', Locations: {self.locations}"
+        msg = f"Input Name: '{self.name}', Input Type: '{self.type}', Location: {self.location}"
         return msg
 
 class LocalFileInput(Input):
@@ -80,31 +78,31 @@ class LocalFileInput(Input):
     def __init__(self,data_dict):
         super().__init__(data_dict)
     
-    def getDataFrame(self,environment):
-        if self.runPresenceTest(environment) == TestResult.COMPLETED_WITH_FAILURE:
+    def getDataFrame(self):
+        if self.runPresenceTest() == TestResult.COMPLETED_WITH_FAILURE:
             return None
         if type(self._df)!=pd.DataFrame:
             format = self.format.lower()
             if format=="excel" or format =="xls" or format=="xlsx":
-                self._df = pd.read_excel(self.locations[environment].getLocationString())
+                self._df = pd.read_excel(self.location.getLocationString())
             elif format=="csv":
-                self._df = pd.read_csv(self.locations[environment].getLocationString())
+                self._df = pd.read_csv(self.location.getLocationString())
             elif format=="paruqet":
-                self._df = pd.read_parquet(self.locations[environment].getLocationString())
+                self._df = pd.read_parquet(self.location.getLocationString())
             else:
                 raise UnableToLoadFormatToPandas(f"{format} is a bit of a stranger to me.")
         return self._df
         
-    def runPresenceTest(self, environment: str) -> TestResult :
-        path = self.locations[environment].getLocationString()    
+    def runPresenceTest(self) -> TestResult :
+        path = self.location.getLocationString()    
         if os.path.isfile(path):
             return TestResult.COMPLETED_WITH_SUCCESS
         else:
             return TestResult.COMPLETED_WITH_FAILURE
 
-    def runFreshEnoughTest(self, environment: str, test: dt.FreshEnoughTest) -> TestResult :
+    def runFreshEnoughTest(self, test: dt.FreshEnoughTest) -> TestResult :
         """ Checks last modification date (and if file exist as well, only if it exist a concept of modification data is there. """
-        path = self.locations[environment].getLocationString()
+        path = self.location.getLocationString()
         if os.path.isfile(path):
             modification_timestamp = os.path.getmtime(path) 
             if time.time() < modification_timestamp +  60 * 60 * test.maxAgeInHours:
@@ -123,24 +121,24 @@ class AzureBlobInput(Input):
     def __init__(self,data_dict):
         super().__init__(data_dict)
     
-    def runPresenceTest(self, environment: str) -> dt.TestResult :
-        properties = self.getBlobProperties(environment)
+    def runPresenceTest(self) -> dt.TestResult :
+        properties = self.getBlobProperties()
         if properties:
             return TestResult.COMPLETED_WITH_SUCCESS
         else:
             return TestResult.COMPLETED_WITH_FAILURE
     
-    def runFreshEnoughTest(self, environment: str, test: dt.FreshEnoughTest) -> TestResult :
-        properties = self.getBlobProperties(environment)
+    def runFreshEnoughTest(self, test: dt.FreshEnoughTest) -> TestResult :
+        properties = self.getBlobProperties()
         if properties:
             return TestResult.COMPLETED_WITH_SUCCESS
         else:
             return TestResult.COMPLETED_WITH_FAILURE
         
 
-    def getBlobProperties(self, environment: str):
+    def getBlobProperties(self):
         #1. Get all login params
-        connection_details = self.locations[environment].parseAsAzureLocation()
+        connection_details = self.location.parseAsAzureLocation()
         key_vault_name = self.secrets_location
         secret_name = connection_details["keyvault_secret_name"]
         conn_string = AzureSecretsManager.getSecretValueByName(key_vault_name, secret_name)
@@ -153,6 +151,37 @@ class AzureBlobInput(Input):
             return blob_client.get_blob_properties()
         except:
             return None
+    
+    def getBlobContentBytes(self):
+         #1. Get all login params
+        connection_details = self.location.parseAsAzureLocation()
+        key_vault_name = self.secrets_location
+        secret_name = connection_details["keyvault_secret_name"]
+        conn_string = AzureSecretsManager.getSecretValueByName(key_vault_name, secret_name)
+        blob_service_client = BlobServiceClient.from_connection_string(conn_string)
+        #2. Check if blob is there
+        container = connection_details["storage_container"]
+        blob = connection_details["storage_blob"]
+        blob_client = blob_service_client.get_blob_client(container,blob)
+        try:
+            return blob_client.download_blob().readall()
+        except:
+            return None
+        
+    def getDataFrame(self):
+        if self.runPresenceTest() == TestResult.COMPLETED_WITH_FAILURE:
+            return None
+        if type(self._df)!=pd.DataFrame:
+            format = self.format.lower()
+            if format=="excel" or format =="xls" or format=="xlsx":
+                self._df = pd.read_excel(BytesIO(self.getBlobContentBytes()))
+            elif format=="csv":
+                self._df = pd.read_csv(BytesIO(self.getBlobContentBytes()))
+            elif format=="paruqet":
+                self._df = pd.read_parquet(BytesIO(self.getBlobContentBytes()))
+            else:
+                raise UnableToLoadFormatToPandas(f"{format} is a bit of a stranger to me.")
+        return self._df
 
         
     

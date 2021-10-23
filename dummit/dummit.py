@@ -37,7 +37,6 @@ class TestLibrary():
             self.secrets_location = secrets.get("secrets_location","")
         # Read the yaml input
         self.name = config["name"]
-        self.environments = config["environments"]
         # Inputs part (tests are there within input config as well!)
         self.inputs = {}
         self.tests = []
@@ -71,9 +70,9 @@ class TestLibrary():
         # Over an out!
         self.logger.logMessage("TestLibrary Constructor completed") 
 
-    def run(self, environment):
+    def run(self):
         run_uuid = uuid.uuid4()
-        self.logger.logMessage(f"Running '{self.name}' for '{environment}' environment. Run ID {run_uuid}")
+        self.logger.logMessage(f"Running '{self.name}' Run ID {run_uuid}")
         
         # set the testRunID in the input so it has a reference where to store tmp files
         for input in self.inputs.values():
@@ -82,13 +81,13 @@ class TestLibrary():
         for test in self.tests:
             test.status = dt.TestResult.IN_PROGRESS    
             if type(test) is dt.PresenceTest:
-                test.status = self.inputs[test.inputName].runPresenceTest(environment)
+                test.status = self.inputs[test.inputName].runPresenceTest()
             elif type(test) is dt.FreshEnoughTest:
-                test.status = self.inputs[test.inputName].runFreshEnoughTest(environment,test)
+                test.status = self.inputs[test.inputName].runFreshEnoughTest(test)
             elif type(test) is dt.FormatTest:
-                test.status = self.inputs[test.inputName].runFormatTest(environment,test)
+                test.status = self.inputs[test.inputName].runFormatTest(test)
             elif type(test) is dt.UniquenessTest:
-                test.status = self.inputs[test.inputName].runUniquenessTest(environment,test)
+                test.status = self.inputs[test.inputName].runUniquenessTest(test)
             else:
                 raise dt.UnknownTestTypeException(test.type)
             self.logger.logTest(test,test.status)
@@ -96,6 +95,4 @@ class TestLibrary():
 if __name__ == "__main__":
     with open('sample_test_library.yaml', 'r') as file:
         tests = TestLibrary(file.read(), TextLogger()) 
-        tests.run("DEV")
-        #tests.run("QA")
-        #tests.run("PROD")
+        tests.run()
