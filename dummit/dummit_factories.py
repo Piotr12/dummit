@@ -1,6 +1,6 @@
 from dummit.dummit_inputs import AzureBlobInput, LocalFileInput
 from dummit.dummit_tests import PresenceTest,FreshEnoughTest,FormatTest, UniquenessTest
-from dummit.dummit_locations import ExactLocation
+from dummit.dummit_locations import ExactLocation, VersionedByDateLocalFileLocation
 
 class UnknownInputTypeException(Exception):
     pass
@@ -13,12 +13,12 @@ class UnknownLocationTypeException(Exception):
 
 class InputFactory():
     @staticmethod
-    def createInputFromDict(data_dict):
+    def createInputFromDict(data_dict: dict, params_dict:dict):
         input_type = data_dict.get("input_type")
         if "local_file" in input_type:
-            return LocalFileInput(data_dict)
+            return LocalFileInput(data_dict, params_dict)
         elif "azure_blob" in input_type:
-            return AzureBlobInput(data_dict)
+            return AzureBlobInput(data_dict, params_dict)
         else:
             raise UnknownInputTypeException(input_type)
 
@@ -38,14 +38,16 @@ class TestFactory():
 
 class LocationFactory():
     @staticmethod
-    def createLocationFromDict(data_string):
+    def createLocationFromDict(input,data_string):
         values = data_string.split(",")
         location_type = values[0].replace(" ","")
         location_value = values[1].replace(" ","")
         if location_type=="exact":
-            return ExactLocation(location_value)
-            pass
-        elif location_type=="":
-            pass
+            return ExactLocation(location_value) # this one takes no params (i.e. run_date)
+        elif location_type=="versioned_by_date":
+            if input.type=="local_file":
+                return VersionedByDateLocalFileLocation(input.params,location_value) 
+            else:
+                raise UnknownLocationTypeException(f"{input.type}, {location_type}")
         else:
-            raise UnknownLocationTypeException(location_type)
+            raise UnknownLocationTypeException(f"{input.type}, {location_type}")

@@ -27,8 +27,9 @@ class Input():
     It actually handles the DataFrame Tests as the specialized class: File / AzureBlob / OracleTable will 
         be there to support it with the DataFrame and placing that logic here makes less duplication (I think :))
     """
-    def __init__(self,data_dict):
+    def __init__(self,data_dict, test_run_params_dict):
         # common fields 
+        self.params = test_run_params_dict # things like "run_date" for time based locations will be here
         self.name = data_dict.get("input_name")
         self.type = data_dict.get("input_type")
         self.format = data_dict.get("input_format", "csv")
@@ -37,7 +38,7 @@ class Input():
         self.testRunID = None   # a non yaml field, to be used to ensure 
                                 # local storage is in unique location for the current test run
                                 # so its not downloaded only once
-        self.location = df.LocationFactory.createLocationFromDict(data_dict["input_location"])
+        self.location = df.LocationFactory.createLocationFromDict(self, data_dict["input_location"])
     
     @abstractmethod
     def getDataFrame(self,format:str):
@@ -75,8 +76,8 @@ class LocalFileInput(Input):
     """
     A file accessible through file system. Actualy a network mount shall also work here.
     """
-    def __init__(self,data_dict):
-        super().__init__(data_dict)
+    def __init__(self,data_dict, test_run_params_dict):
+        super().__init__(data_dict, test_run_params_dict)
     
     def getDataFrame(self):
         if self.runPresenceTest() == TestResult.COMPLETED_WITH_FAILURE:
@@ -94,6 +95,8 @@ class LocalFileInput(Input):
         return self._df
         
     def runPresenceTest(self) -> TestResult :
+        if (self.location.mappedWell == False):
+            return TestResult.COMPLETED_WITH_FAILURE
         path = self.location.getLocationString()    
         if os.path.isfile(path):
             return TestResult.COMPLETED_WITH_SUCCESS
@@ -102,6 +105,8 @@ class LocalFileInput(Input):
 
     def runFreshEnoughTest(self, test: dt.FreshEnoughTest) -> TestResult :
         """ Checks last modification date (and if file exist as well, only if it exist a concept of modification data is there. """
+        if (self.location.mappedWell == False):
+            return TestResult.COMPLETED_WITH_FAILURE
         path = self.location.getLocationString()
         if os.path.isfile(path):
             modification_timestamp = os.path.getmtime(path) 
@@ -118,8 +123,8 @@ class AzureBlobInput(Input):
     It does not exist for real. At least not yet. Some tests can be done without download via API, some will require full access.
     Need to think about caching it for the test run duration if download happens.
     """
-    def __init__(self,data_dict):
-        super().__init__(data_dict)
+    def __init__(self,data_dict, test_run_params_dict):
+        super().__init__(data_dict, test_run_params_dict)
     
     def runPresenceTest(self) -> dt.TestResult :
         properties = self.getBlobProperties()
@@ -169,6 +174,8 @@ class AzureBlobInput(Input):
             return None
         
     def getDataFrame(self):
+        """ load the blob content into dataframe and store it for future usage 
+        so its not being downloaded more than once per run."""
         if self.runPresenceTest() == TestResult.COMPLETED_WITH_FAILURE:
             return None
         if type(self._df)!=pd.DataFrame:
@@ -190,10 +197,10 @@ class OracleTableInput(Input):
     It does not exist for real. At least not yet. But why not test some Table for compliance?
     Need to think about caching the query result during test run
     """
-    def __init__(self,data_dict):
-        super().__init__(data_dict)
+    def __init__(self,data_dict, test_run_params_dict):
+        super().__init__(data_dict, test_run_params_dict)
 
 class SharepointBlobInput(Input):
     """ nothing here yet"""
-    def __init__(self,data_dict):
-        super().__init__(data_dict)
+    def __init__(self,data_dict, test_run_params_dict):
+        super().__init__(data_dict, test_run_params_dict)

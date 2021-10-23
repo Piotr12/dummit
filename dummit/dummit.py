@@ -21,7 +21,7 @@ class TextLogger():
         return time.strftime("%d/%m/%Y %H:%M:%S %Z", time.localtime())
 
 class TestLibrary():
-    def __init__(self,yaml_string,logger:TextLogger):
+    def __init__(self,yaml_string:str,params_dict: dict, logger:TextLogger):
         # Set the logger so I can start logging
         self.logger = logger
         self.logger.logMessage(f"Logger Started")
@@ -41,7 +41,7 @@ class TestLibrary():
         self.inputs = {}
         self.tests = []
         for input_dict in config["inputs"]:
-            input = df.InputFactory.createInputFromDict(input_dict)
+            input = df.InputFactory.createInputFromDict(input_dict, params_dict)
             if self.secrets_provider:
                 input.secrets_provider = self.secrets_provider
                 input.secrets_location = self.secrets_location
@@ -73,10 +73,9 @@ class TestLibrary():
     def run(self):
         run_uuid = uuid.uuid4()
         self.logger.logMessage(f"Running '{self.name}' Run ID {run_uuid}")
-        
-        # set the testRunID in the input so it has a reference where to store tmp files
         for input in self.inputs.values():
-            input.testRunID = run_uuid
+            input.testRunID = run_uuid # set the testRunID in the input so it has a reference where to store tmp files if needed
+            input._df = None #invalidate any previous DataFrames being loaded
         # run all tests (forget parallel runs for now)
         for test in self.tests:
             test.status = dt.TestResult.IN_PROGRESS    
@@ -91,8 +90,3 @@ class TestLibrary():
             else:
                 raise dt.UnknownTestTypeException(test.type)
             self.logger.logTest(test,test.status)
-            
-if __name__ == "__main__":
-    with open('sample_test_library.yaml', 'r') as file:
-        tests = TestLibrary(file.read(), TextLogger()) 
-        tests.run()
