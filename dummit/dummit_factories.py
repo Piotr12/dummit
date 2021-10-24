@@ -1,6 +1,6 @@
 from dummit.dummit_inputs import AzureBlobInput, LocalFileInput
 from dummit.dummit_tests import PresenceTest,FreshEnoughTest,FormatTest, UniquenessTest
-from dummit.dummit_locations import ExactLocation, VersionedByDateLocalFileLocation
+from dummit.dummit_locations import ExactLocation, VersionedByDateAzureBlobLocation, VersionedByDateLocalFileLocation
 
 class UnknownInputTypeException(Exception):
     pass
@@ -47,6 +47,8 @@ class LocationFactory():
         elif location_type=="versioned_by_date":
             if input.type=="local_file":
                 return VersionedByDateLocalFileLocation(input.params,location_value) 
+            elif input.type=="azure_blob":
+                return VersionedByDateAzureBlobLocation(input.params,location_value) 
             else:
                 raise UnknownLocationTypeException(f"{input.type}, {location_type}")
         else:

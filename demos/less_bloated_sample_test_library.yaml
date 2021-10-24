@@ -4,43 +4,50 @@ secrets:
   secrets_location: test-keyvault-playground
   # will need three os envs to run Tenant/Client/ClientSecret!
 inputs:
-- input_name: sales
+- input_name: blob_sales
   input_type: azure_blob
   input_format: csv
   input_header_row: True
   input_location: exact, blob-connection-string@playgroundblob01/dummit/demos/sales.csv
-  #must:
-  #- be_present: True
-  #would_be_nice_for_it_to:
-  #- be_well_formated:
-  #  - prod_id: int
-  #  - date: string
-  #  - count: int
-  #- be_well_formated: # this one is there to fail
-  #  - prod_id: int
-  #  - date: int
-  #  - count: int
-- input_name: daily_products_snapshot
+  must:
+  - be_present: True
+  would_be_nice_for_it_to:
+  - be_well_formated:
+    - prod_id: int
+    - date: string
+    - count: int
+  - be_well_formated: # this one is there to fail
+    - prod_id: int
+    - date: int
+    - count: int
+- input_name: local_daily_products
   input_type: local_file
   input_format: csv
   input_header_row: True
   input_location: versioned_by_date, demos/daily/yyyymmdd/.*products.*\.csv
   must:
   - be_present: True
-- input_name: products
+- input_name: blob_daily_products
+  input_type: azure_blob
+  input_format: csv
+  input_header_row: True
+  input_location: versioned_by_date, blob-connection-string@playgroundblob01/dummit/demos/daily/yyyymmdd/.*products.*\.csv
+  must:
+  - be_present: True
+- input_name: local_products
   input_type: local_file
   input_format: csv
   input_header_row: True
   input_location: exact, demos/products.csv
-  #must:
-  #- be_present: True
-  #- be_modified_at_least_x_hours_ago: 24
-  #would_be_nice_for_it_to:
-  #- be_well_formated:
-  #  - prod_id: int
-  #  - prod_name: string
-  #  - prod_category: string
-  #- have_no_duplicates_for_a_key_of:
-  #  - prod_id
-  #- have_no_duplicates_for_a_key_of: #this should fail for dev sample file
-  #  - prod_category
+  must:
+  - be_present: True
+  - be_modified_at_least_x_hours_ago: 24
+  would_be_nice_for_it_to:
+  - be_well_formated:
+    - prod_id: int
+    - prod_name: string
+    - prod_category: string
+  - have_no_duplicates_for_a_key_of:
+    - prod_id
+  - have_no_duplicates_for_a_key_of: #this should fail for dev sample file
+    - prod_category

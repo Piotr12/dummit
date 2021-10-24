@@ -4,13 +4,12 @@ import os
 import time
 from io import BytesIO
 
-from pandas.core.base import NoNewAttributesMixin
 from azure.storage.blob import BlobServiceClient,  __version__
 
 #from dummit.dummit_factories import LocationFactory
 
 from dummit.dummit_tests import TestResult
-from dummit.dummit_secrets import AzureSecretsManager
+from dummit.dummit_secrets import SecretsSingleton
 from . import dummit_tests as dt
 from . import dummit_df_tests as dft
 from . import dummit_factories as df
@@ -144,9 +143,7 @@ class AzureBlobInput(Input):
     def getBlobProperties(self):
         #1. Get all login params
         connection_details = self.location.parseAsAzureLocation()
-        key_vault_name = self.secrets_location
-        secret_name = connection_details["keyvault_secret_name"]
-        conn_string = AzureSecretsManager.getSecretValueByName(key_vault_name, secret_name)
+        conn_string = SecretsSingleton().getSecretValueByName(connection_details["keyvault_secret_name"])
         blob_service_client = BlobServiceClient.from_connection_string(conn_string)
         #2. Check if blob is there
         container = connection_details["storage_container"]
@@ -160,9 +157,7 @@ class AzureBlobInput(Input):
     def getBlobContentBytes(self):
          #1. Get all login params
         connection_details = self.location.parseAsAzureLocation()
-        key_vault_name = self.secrets_location
-        secret_name = connection_details["keyvault_secret_name"]
-        conn_string = AzureSecretsManager.getSecretValueByName(key_vault_name, secret_name)
+        conn_string = SecretsSingleton().getSecretValueByName(connection_details["keyvault_secret_name"])
         blob_service_client = BlobServiceClient.from_connection_string(conn_string)
         #2. Check if blob is there
         container = connection_details["storage_container"]

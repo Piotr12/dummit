@@ -1,5 +1,7 @@
 import os
 import re
+from azure.storage.blob import BlobServiceClient,  __version__
+from dummit.dummit_secrets import AzureSecretsManager, SecretsSingleton
 
 class Location:
     """parent for all locations, some will be same for all input types like ExactLocation 
@@ -67,3 +69,34 @@ class VersionedByDateLocalFileLocation(Location):
                 self._mapped = False
         else:
             raise NotImplementedError("only yyyymmdd timestamp is implemented as of now")
+
+class VersionedByDateAzureBlobLocation(Location):
+    def __init__(self,params,location_string):
+        super().__init__(location_string)
+        if "yyyymmdd" in location_string:
+            self.location_string = location_string.replace("yyyymmdd",params["run_date"])
+            connection_details = self.parseAsAzureLocation()
+            conn_string = SecretsSingleton().getSecretValueByName(connection_details["keyvault_secret_name"])
+            blob_service_client = BlobServiceClient.from_connection_string(conn_string)
+            container_client = blob_service_client.get_container_client(connection_details["storage_container"])
+            mask = self.getNameStartsWith()
+            blobs_matching_location = list(container_client.list_blobs(mask))
+            if len(blobs_matching_location)==1:
+                # ugly way to get this location rewriten with the right values for the BlobInput to work
+                exact_location = str(blobs_matching_location[0].name)
+                connection_details = self.parseAsAzureLocation()
+                self.location_string = self.location_string.replace(connection_details["storage_blob"], exact_location)            
+                self._mapped = True
+            else:
+                self._mapped = False # no file at all or more than one file, thats not what we want
+        else:
+            raise NotImplementedError("only yyyymmdd timestamp is implemented as of now")
+        self._mapped = False
+
+    def getNameStartsWith(self):
+        # as azure blob api allows to use "startsWith" blob filtering this is a dirty way to get
+        # from a regexp that uses .* to a "startsWith" string, 
+        full_blob_path = self.parseAsAzureLocation()["storage_blob"]
+        position = full_blob_path.find('.*')
+        result = full_blob_path[:position-1]
+        return result

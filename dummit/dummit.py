@@ -3,6 +3,8 @@ import yaml
 import time
 import uuid
 
+from dummit.dummit_secrets import SecretsSingleton
+
 from . import dummit_factories as df
 from . import dummit_tests as dt
 
@@ -30,11 +32,17 @@ class TestLibrary():
         config = yaml.load(yaml_string,Loader=yaml.SafeLoader)
         self.logger.logMessage("Config Loaded") 
 
-        # Load the secrets data (provider and location for it)
+        # Load the secrets data (provider and location for it), initiate the SecretsSingleton
         secrets = config.get("secrets",None)
         if secrets:
-            self.secrets_provider = secrets.get("secrets_provider","")
-            self.secrets_location = secrets.get("secrets_location","")
+            provider = secrets.get("secrets_provider","")
+            location = secrets.get("secrets_location","")
+            if provider=="" or location =="":
+                raise ConfigUninteligibleException("secrets not defined well")
+            self.secretsManager = SecretsSingleton()
+            self.secretsManager.configure(provider,location)
+        else:
+            self.secretsManager = None
         # Read the yaml input
         self.name = config["name"]
         # Inputs part (tests are there within input config as well!)
@@ -42,9 +50,6 @@ class TestLibrary():
         self.tests = []
         for input_dict in config["inputs"]:
             input = df.InputFactory.createInputFromDict(input_dict, params_dict)
-            if self.secrets_provider:
-                input.secrets_provider = self.secrets_provider
-                input.secrets_location = self.secrets_location
             self.inputs[input.name] = input
             # this double for loop section below is ... ugly :( need some redesign when time allows. 
             if "must" in input_dict:
