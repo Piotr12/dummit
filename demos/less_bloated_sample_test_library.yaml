@@ -2,38 +2,48 @@ name: sample101 test library
 secrets:
   secrets_provider: azure_keyvault
   secrets_location: test-keyvault-playground
-  # will need three os envs to run Tenant/Client/ClientSecret!
+  # above will also need three os envs to run Tenant/Client/ClientSecret!
 inputs:
 - input_name: blob_sales
   input_type: azure_blob
   input_format: csv
   input_header_row: True
   input_location: exact, blob-connection-string@playgroundblob01/dummit/demos/sales.csv
-  must:
-  - be_present: True
-  would_be_nice_for_it_to:
-  - be_well_formated:
-    - prod_id: int
-    - date: string
-    - count: int
-  - be_well_formated: # this one is there to fail
-    - prod_id: int
-    - date: int
-    - count: int
+  # must:
+  # - be_present: True
+  # would_be_nice_for_it_to:
+  # - be_well_formated:
+  #   - prod_id: int
+  #   - date: string
+  #   - count: int
+  # - be_well_formated: # this one is there to fail
+  #   - prod_id: int
+  #   - date: int
+  #   - count: int
 - input_name: local_daily_products
   input_type: local_file
   input_format: csv
   input_header_row: True
   input_location: versioned_by_date, demos/daily/yyyymmdd/.*products.*\.csv
-  must:
-  - be_present: True
-- input_name: blob_daily_products
-  input_type: azure_blob
+- input_name: local_versioned_sales
+  input_type: local_versioned_file
   input_format: csv
   input_header_row: True
-  input_location: versioned_by_date, blob-connection-string@playgroundblob01/dummit/demos/daily/yyyymmdd/.*products.*\.csv
+  input_location: exact, demos/daily/20211002/sales.csv
+  input_location_previous_version: exact, demos/daily/20211001/sales.csv
   must:
-  - be_present: True
+  - have_sum_delta_within_limits:
+      allowed_change_percentage: 10
+      sum_column: volume
+  # must:
+  # - be_present: True
+# - input_name: blob_daily_products
+#   input_type: azure_blob
+#   input_format: csv
+#   input_header_row: True
+#   input_location: versioned_by_date, blob-connection-string@playgroundblob01/dummit/demos/daily/yyyymmdd/.*products.*\.csv
+#   must:
+#   - be_present: True
 - input_name: local_products
   input_type: local_file
   input_format: csv
@@ -51,3 +61,5 @@ inputs:
     - prod_id
   - have_no_duplicates_for_a_key_of: #this should fail for dev sample file
     - prod_category
+merged_inputs:
+  - merged_input_name: sales_mapping

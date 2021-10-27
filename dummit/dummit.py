@@ -92,6 +92,8 @@ class TestLibrary():
                 test.status = self.inputs[test.inputName].runFormatTest(test)
             elif type(test) is dt.UniquenessTest:
                 test.status = self.inputs[test.inputName].runUniquenessTest(test)
+            elif type(test) is dt.SumDeltaWithinLimitsTest:
+                test.status = self.inputs[test.inputName].runDeltaWithinLimitsTest(test)
             else:
-                raise dt.UnknownTestTypeException(test.type)
+                raise dt.UnknownTestTypeException(type(test))
             self.logger.logTest(test,test.status)

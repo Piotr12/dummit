@@ -3,6 +3,9 @@ import enum
 class IncompleteTestDefinition(Exception):
     pass
 
+class UnknownTestTypeException(Exception):
+    pass
+
 class TestResult:
     NOT_STARTED = 'NOT_STARTED'
     IN_PROGRESS = 'IN_PROGRESS'
@@ -65,3 +68,15 @@ class FormatTest(ColumnsBasedTest):
     def __init__(self,input_name,test_definition,is_critical):
         super().__init__(input_name,test_definition,is_critical)
     
+class SumDeltaWithinLimitsTest(Test):
+    def __init__(self,input_name,test_definition,is_critical):
+        super().__init__(input_name,is_critical)
+        self.allowedChangePercentage = test_definition["allowed_change_percentage"]
+        self.sumColumn = test_definition["sum_column"]
+    def __str__(self):
+        msg = super().__str__()
+        msg = msg + f"allowed % change: {self.allowedChangePercentage}, "
+        msg = msg + f"for total on {self.sumColumn} column."
+        return msg
+        
+        

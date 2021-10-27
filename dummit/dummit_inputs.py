@@ -8,7 +8,7 @@ from azure.storage.blob import BlobServiceClient,  __version__
 
 #from dummit.dummit_factories import LocationFactory
 
-from dummit.dummit_tests import TestResult
+from dummit.dummit_tests import Test, TestResult
 from dummit.dummit_secrets import SecretsSingleton
 from . import dummit_tests as dt
 from . import dummit_df_tests as dft
@@ -34,6 +34,7 @@ class Input():
         self.format = data_dict.get("input_format", "csv")
         self.header_row = data_dict.get("input_header_row", True)
         self._df = None # filled via getDataFrame not to recreate it for each test
+        self._previous_df = None # same as above 
         self.testRunID = None   # a non yaml field, to be used to ensure 
                                 # local storage is in unique location for the current test run
                                 # so its not downloaded only once
@@ -42,6 +43,10 @@ class Input():
     @abstractmethod
     def getDataFrame(self,format:str):
         raise MethodNotImplementedException("in getDataFrame")
+
+    @abstractmethod
+    def getPreviousDataFrame(self):
+        raise MethodNotImplementedException("in getPreviousDataFrame")
 
     @abstractmethod
     def runPresenceTest(self) -> TestResult :
@@ -67,6 +72,12 @@ class Input():
         else:
             return dft.DataFrameTester.testForFormat(df,test)
 
+    def runDeltaWithinLimitsTest(self, test:dt.SumDeltaWithinLimitsTest) ->TestResult:
+        df1 = self.getDataFrame()
+        df2 = self.getPreviousDataFrame()
+        return dft.DataFrameTester.testForSumDelta(df1,df2,test)
+
+    
     def __str__(self):
         msg = f"Input Name: '{self.name}', Input Type: '{self.type}', Location: {self.location}"
         return msg
@@ -87,7 +98,7 @@ class LocalFileInput(Input):
                 self._df = pd.read_excel(self.location.getLocationString())
             elif format=="csv":
                 self._df = pd.read_csv(self.location.getLocationString())
-            elif format=="paruqet":
+            elif format=="parquet":
                 self._df = pd.read_parquet(self.location.getLocationString())
             else:
                 raise UnableToLoadFormatToPandas(f"{format} is a bit of a stranger to me.")
@@ -116,6 +127,35 @@ class LocalFileInput(Input):
         else: 
             return dt.TestResult.COMPLETED_WITH_FAILURE
 
+class VersionedLocalFileInput(LocalFileInput):
+    def __init__(self,data_dict, test_run_params_dict):
+        super().__init__(data_dict, test_run_params_dict)
+        self.previous_location = df.LocationFactory.createLocationFromDict(self, data_dict["input_location_previous_version"])
+
+    def runPresenceTest(self) -> TestResult :
+        if (self.location.mappedWell == False) or (self.previous_location.mappedWell==False):
+            return TestResult.COMPLETED_WITH_FAILURE
+        path = self.location.getLocationString()  
+        previous_path = self.previous_location.getLocationString()  
+        if os.path.isfile(path) and os.path.isfile(previous_path):
+            return TestResult.COMPLETED_WITH_SUCCESS
+        else:
+            return TestResult.COMPLETED_WITH_FAILURE
+
+    def getPreviousDataFrame(self):
+        if self.runPresenceTest() == TestResult.COMPLETED_WITH_FAILURE:
+            return None
+        if type(self._previous_df)!=pd.DataFrame: #TODO -> refactor this as its an awful copy paste now!
+            format = self.format.lower()
+            if format=="excel" or format =="xls" or format=="xlsx":
+                self._previous_df = pd.read_excel(self.previous_location.getLocationString())
+            elif format=="csv":
+                self._previous_df = pd.read_csv(self.previous_location.getLocationString())
+            elif format=="parquet":
+                self._previous_df = pd.read_parquet(self.previous_location.getLocationString())
+            else:
+                raise UnableToLoadFormatToPandas(f"{format} is a bit of a stranger to me.")
+        return self._previous_df 
 
 class AzureBlobInput(Input):
     """

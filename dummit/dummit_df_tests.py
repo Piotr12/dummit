@@ -1,5 +1,5 @@
 import pandas as pd
-from dummit.dummit_tests import TestResult
+from dummit.dummit_tests import Test, TestResult,SumDeltaWithinLimitsTest
 
 # here the DataFrame based tests will be done
 # as static methods of a class 
@@ -9,7 +9,7 @@ from dummit.dummit_tests import TestResult
 
 class DataFrameTester():
     @staticmethod
-    def testForFormat(df,test):
+    def testForFormat(df,test) -> TestResult:
         for column in test.columns:
             column_name = list(column.keys())[0]
             expected_type = list(column.values())[0]
@@ -19,7 +19,7 @@ class DataFrameTester():
         return TestResult.COMPLETED_WITH_SUCCESS
     
     @staticmethod
-    def testForUniqueness(df,test):
+    def testForUniqueness(df,test) ->TestResult:
         count = df.shape[0]
         unique_count = df.groupby(test.columns).count().shape[0]
         if count == unique_count: 
@@ -35,3 +35,14 @@ class DataFrameTester():
         if (pandas_type=="object" and expected_type =="string"):
             return True
         return False
+
+    @staticmethod
+    def testForSumDelta(df_current,df_past, test :SumDeltaWithinLimitsTest) -> TestResult:
+        sum_current = df_current[test.sumColumn].sum()
+        sum_past = df_past[test.sumColumn].sum()
+        delta  = (sum_current-sum_past)/sum_current
+        if (delta>test.allowedChangePercentage / 100): 
+            return TestResult.COMPLETED_WITH_FAILURE
+        if (delta< -1 * test.allowedChangePercentage / 100): 
+            return TestResult.COMPLETED_WITH_FAILURE        
+        return TestResult.COMPLETED_WITH_SUCCESS

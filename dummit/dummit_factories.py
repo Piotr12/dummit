@@ -1,5 +1,5 @@
-from dummit.dummit_inputs import AzureBlobInput, LocalFileInput
-from dummit.dummit_tests import PresenceTest,FreshEnoughTest,FormatTest, UniquenessTest
+from dummit.dummit_inputs import AzureBlobInput, LocalFileInput, VersionedLocalFileInput
+from dummit.dummit_tests import PresenceTest,FreshEnoughTest,FormatTest, UniquenessTest, SumDeltaWithinLimitsTest
 from dummit.dummit_locations import ExactLocation, VersionedByDateAzureBlobLocation, VersionedByDateLocalFileLocation
 
 class UnknownInputTypeException(Exception):
@@ -15,9 +15,11 @@ class InputFactory():
     @staticmethod
     def createInputFromDict(data_dict: dict, params_dict:dict):
         input_type = data_dict.get("input_type")
-        if "local_file" in input_type:
+        if input_type == "local_file":
             return LocalFileInput(data_dict, params_dict)
-        elif "azure_blob" in input_type:
+        elif input_type == "local_versioned_file":
+            return VersionedLocalFileInput(data_dict,params_dict)
+        elif input_type == "azure_blob":
             return AzureBlobInput(data_dict, params_dict)
         else:
             raise UnknownInputTypeException(input_type)
@@ -33,6 +35,8 @@ class TestFactory():
             return FormatTest(input_name,test_definition,is_critical)
         elif test_type=="have_no_duplicates_for_a_key_of":
             return UniquenessTest(input_name,test_definition,is_critical)
+        elif test_type=="have_sum_delta_within_limits":
+            return SumDeltaWithinLimitsTest(input_name,test_definition,is_critical)
         else:
             raise UnknownTestTypeException(test_type)
 
