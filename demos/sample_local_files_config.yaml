@@ -1,0 +1,45 @@
+# Minimal required conent is a name ...
+name: sample101 test library 
+# ... and a list of inputs that should be tested
+inputs: 
+  # simple input - a csv file with a header row in the local file system
+- input_name: local_products
+  input_type: local_file
+  input_format: csv
+  input_header_row: True
+  input_location: exact, demos/products.csv
+  # list of critical tests, ones that the input must pass
+  # most of them require some params, just the be_present one is one that has none
+  must:
+  - be_present
+  - be_modified_at_least_x_hours_ago: 24 # quite obvious, right?
+  - be_well_formated: # for that one, the params is a dict, listing columns I want to check
+    - prod_id: int
+    - prod_name: string
+    - prod_category: string
+  # list of nice to have tests, ones that may fail but should result in a warning notice
+  would_be_nice_for_it_to:
+  - have_no_duplicates_for_a_key_of: # here again a list of columns
+    - prod_id
+  - have_no_duplicates_for_a_key_of: #this should fail for sample file
+    - prod_category
+- input_name: local_daily_products_snapshot
+  input_type: local_file
+  input_format: csv
+  input_header_row: True
+  input_location: versioned_by_date, demos/daily/yyyymmdd/.*products.*\.csv
+  must:
+    - be_present
+- input_name: local_versioned_sales
+  input_type: local_versioned_file
+  input_format: csv
+  input_header_row: True
+  input_location: exact, demos/daily/20211002/sales.csv
+  input_location_previous_version: exact, demos/daily/20211001/sales.csv
+  must:
+  - have_sum_delta_within_limits:
+      allowed_change_percentage: 10
+      sum_column: volume
+  - be_present
+merged_inputs:
+  - merged_input_name: sales_mapping

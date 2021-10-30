@@ -1,7 +1,7 @@
 import os
 import re
 from azure.storage.blob import BlobServiceClient,  __version__
-from dummit.dummit_secrets import AzureSecretsManager, SecretsSingleton
+from dummit.secrets import AzureSecretsManager, SecretsSingleton
 
 class Location:
     """parent for all locations, some will be same for all input types like ExactLocation 

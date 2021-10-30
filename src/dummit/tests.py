@@ -11,7 +11,7 @@ class TestResult:
     IN_PROGRESS = 'IN_PROGRESS'
     COMPLETED_WITH_SUCCESS = 'COMPLETED_WITH_SUCCESS'
     COMPLETED_WITH_FAILURE = 'COMPLETED_WITH_FAILURE'
-
+    
 class Test():
     def __init__(self,input_name,is_critical):
         """

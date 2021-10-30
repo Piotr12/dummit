@@ -6,6 +6,9 @@ from azure.identity import ClientSecretCredential
 # a limitation of current design is that all secrets for a testlibrary have to be in single 
 # Secrets vault. Not a big deal. 
 
+class UnableToReadSecret(Exception):
+    pass
+
 class SecretsSingleton:
     _instance = None
     def __new__(class_, *args, **kwargs):
@@ -13,18 +16,30 @@ class SecretsSingleton:
             class_._instance = object.__new__(class_, *args, **kwargs)
         return class_._instance
 
-    def configure(self,provider,location):
+    def configure(self,provider,params):
         if provider == "azure_keyvault":
-            self.provider = AzureSecretsManager(location)
+            self.provider = AzureSecretsManager(params)
+        elif provider == "env_variables":
+            self.provider = EnvironmentVariablesSecretsManager(params)
         else: 
             raise NotImplementedError(f"SecretsManager for provider {provider} is not implemented?") 
     
     def getSecretValueByName(self,secret_name):
         return self.provider.getSecretValueByName(secret_name)
 
+class EnvironmentVariablesSecretsManager:
+    def __init__(self,params):
+        self.prefix = params
+    def getSecretValueByName(self,secret_name):
+        value = os.environ.get(self.prefix + secret_name,None)
+        if value:
+            return value
+        else:
+            raise UnableToReadSecret(secret_name)
+
 class AzureSecretsManager:
-    def __init__(self,key_vault_name):
-        self.key_vault_name = key_vault_name
+    def __init__(self,params):
+        self.key_vault_name = params
 
     def getSecretValueByName(self,secret_name):
         # this actually requires three extra env variables! 

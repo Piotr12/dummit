@@ -1,5 +1,5 @@
 import pandas as pd
-from dummit.dummit_tests import Test, TestResult,SumDeltaWithinLimitsTest
+from dummit.tests import Test, TestResult,SumDeltaWithinLimitsTest
 
 # here the DataFrame based tests will be done
 # as static methods of a class 

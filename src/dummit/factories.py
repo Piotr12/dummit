@@ -1,6 +1,6 @@
-from dummit.dummit_inputs import AzureBlobInput, LocalFileInput, VersionedLocalFileInput
-from dummit.dummit_tests import PresenceTest,FreshEnoughTest,FormatTest, UniquenessTest, SumDeltaWithinLimitsTest
-from dummit.dummit_locations import ExactLocation, VersionedByDateAzureBlobLocation, VersionedByDateLocalFileLocation
+from dummit.inputs import AzureBlobInput, LocalFileInput, VersionedLocalFileInput
+from dummit.tests import PresenceTest,FreshEnoughTest,FormatTest, UniquenessTest, SumDeltaWithinLimitsTest
+from dummit.locations import ExactLocation, VersionedByDateAzureBlobLocation, VersionedByDateLocalFileLocation
 
 class UnknownInputTypeException(Exception):
     pass

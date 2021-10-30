@@ -3,10 +3,10 @@ import yaml
 import time
 import uuid
 
-from dummit.dummit_secrets import SecretsSingleton
+from dummit.secrets import SecretsSingleton
 
-from . import dummit_factories as df
-from . import dummit_tests as dt
+from . import factories as df
+from . import tests as dt
 
 class ConfigUninteligibleException(Exception):
     pass
@@ -36,13 +36,16 @@ class TestLibrary():
         secrets = config.get("secrets",None)
         if secrets:
             provider = secrets.get("secrets_provider","")
-            location = secrets.get("secrets_location","")
-            if provider=="" or location =="":
+            params = secrets.get("secrets_params_string","")
+            if provider=="" or params =="":
                 raise ConfigUninteligibleException("secrets not defined well")
             self.secretsManager = SecretsSingleton()
-            self.secretsManager.configure(provider,location)
+            self.secretsManager.configure(provider,params)
+            self.logger.logMessage("Secrets processed")
         else:
             self.secretsManager = None
+            self.logger.logMessage("Secrets not there in config file. That is fine. Just letting you know.")
+        
         # Read the yaml input
         self.name = config["name"]
         # Inputs part (tests are there within input config as well!)
@@ -51,26 +54,33 @@ class TestLibrary():
         for input_dict in config["inputs"]:
             input = df.InputFactory.createInputFromDict(input_dict, params_dict)
             self.inputs[input.name] = input
+            test_configs  = []
+            # check what tests are there in config
             # this double for loop section below is ... ugly :( need some redesign when time allows. 
             if "must" in input_dict:
                 for critical_test in input_dict["must"]:
-                    test_type = list(critical_test.keys())[0]
-                    test_definition = list(critical_test.values())[0]
+                    test_configs.append({"string_with_definition":critical_test, "isCritical":True})
+            if "would_be_nice_for_it_to" in input_dict: 
+                for nice_to_have_test in input_dict["would_be_nice_for_it_to"]:    
+                    test_configs.append({"string_with_definition":nice_to_have_test, "isCritical":False})
+            # and now create the tests, both critical and not critical
+            for test_config in test_configs:
+                test = None
+                if test_config["string_with_definition"] == "be_present":
+                    test = df.TestFactory.createTestFromDict(input.name,"be_present",None,test_config["isCritical"])
+                else:
+                    test_type = list(test_config["string_with_definition"].keys())[0]
+                    test_definition = list(test_config["string_with_definition"].values())[0]
                     test = df.TestFactory.createTestFromDict(input.name,test_type,
-                                test_definition, is_critical=True)
+                                test_definition, is_critical=test_config["isCritical"])
+                if test:
                     self.tests.append(test)
-            if "would_be_nice_for_it_to" in input_dict:
-                for nice_to_have_test in input_dict["would_be_nice_for_it_to"]:        
-                    test_type = list(nice_to_have_test.keys())[0]
-                    test_definition = list(nice_to_have_test.values())[0]
-                    test = df.TestFactory.createTestFromDict(input.name,test_type,
-                                test_definition, is_critical=False)
-                    self.tests.append(test)
-
+                else:
+                    raise ConfigUninteligibleException()
+                    
+        # some output so I can see what was loaded    
         self.logger.logMessage(f"Inputs count: {len(self.inputs)}")            
         self.logger.logMessage(f"Tests count: {len(self.tests)}")
-
-
 
         # Over an out!
         self.logger.logMessage("TestLibrary Constructor completed") 

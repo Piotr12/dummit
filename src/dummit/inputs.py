@@ -1,18 +1,16 @@
-from abc import abstractmethod
 import pandas as pd
 import os
 import time
-from io import BytesIO
 
+from abc import abstractmethod
+from io import BytesIO
 from azure.storage.blob import BlobServiceClient,  __version__
 
-#from dummit.dummit_factories import LocationFactory
-
-from dummit.dummit_tests import Test, TestResult
-from dummit.dummit_secrets import SecretsSingleton
-from . import dummit_tests as dt
-from . import dummit_df_tests as dft
-from . import dummit_factories as df
+from dummit.tests import Test, TestResult
+from dummit.secrets import SecretsSingleton
+from . import tests as dt
+from . import df_tests as dft
+from . import factories as df
 
 class MethodNotImplementedException(Exception):
     pass

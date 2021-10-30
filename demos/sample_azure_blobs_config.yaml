@@ -1,8 +1,7 @@
 name: sample101 test library
 secrets:
-  secrets_provider: azure_keyvault
-  secrets_location: test-keyvault-playground
-  # above will also need three os envs to run Tenant/Client/ClientSecret!
+  secrets_provider: env_variables
+  secrets_params_string: SECRET_ 
 inputs:
 - input_name: blob_sales
   input_type: azure_blob

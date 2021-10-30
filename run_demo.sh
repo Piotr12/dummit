@@ -1,0 +1,1 @@
+python demo.py demos/sample_local_files_config.yaml --run_date 20211002
