@@ -1,12 +1,12 @@
 rm *.png
-pyreverse -o png dummit/dummit_tests.py
+pyreverse -o png src/dummit/tests.py
 mv classes.png img/test_classes.png
-pyreverse -o png dummit/dummit_inputs.py
+pyreverse -o png src/dummit/inputs.py
 mv classes.png img/input_classes.png
-pyreverse -o png dummit/dummit_df_tests.py
+pyreverse -o png src/dummit/df_tests.py
 mv classes.png img/df_test_classes.png
-pyreverse -o png dummit/dummit_locations.py
+pyreverse -o png src/dummit/locations.py
 mv classes.png img/location_classes.png
-pyreverse -o png dummit/dummit.py dummit/dummit_factories.py dummit/dummit_secrets.py 
+pyreverse -o png src/dummit/dummit.py src/dummit/factories.py src/dummit/secrets.py 
 mv classes.png img/all_other_classes.png
 rm packages.png
