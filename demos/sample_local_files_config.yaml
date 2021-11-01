@@ -23,6 +23,7 @@ inputs:
     - prod_id
   - have_no_duplicates_for_a_key_of: #this should fail for sample file
     - prod_category
+### And now some other file types / location types
 - input_name: local_daily_products_snapshot
   input_type: local_file
   input_format: csv
